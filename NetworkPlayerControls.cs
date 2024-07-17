@@ -1,14 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
-using TouchControlsKit;
 using Unity.Netcode;
 using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
 internal class NetworkPlayerControls : NetworkBehaviour
 {
-    [SerializeField] internal TCKTouchpad touchpad;
-    [SerializeField] private FixedJoystick joystick;
     [SerializeField] private CharacterController controller;
     private static OrbitCamera orbitCamera;
     private static bool isRunning;
@@ -191,7 +188,7 @@ internal class NetworkPlayerControls : NetworkBehaviour
         {
             singleton = this;
             orbitCamera = OrbitCamera.singleton;
-            orbitCamera.SetupCam(transform, touchpad);
+            orbitCamera.SetupCam(transform);
             PlayerSpeedManagerServer._singleton.playerCanControl += CanControlFunction;
             canControl = PlayerSpeedManagerServer._singleton.isControlling;
         }
@@ -210,8 +207,8 @@ internal class NetworkPlayerControls : NetworkBehaviour
         {
             if (!canControl) return;
 
-            horizontal = !Application.isMobilePlatform ? Input.GetAxis("Horizontal") : joystick.Horizontal;
-            vertical = !Application.isMobilePlatform ? Input.GetAxis("Vertical") : joystick.Vertical;
+            horizontal = Input.GetAxis("Horizontal");
+            vertical = Input.GetAxis("Vertical");
             moveDirection = (orbitCamera.transform.forward * vertical + orbitCamera.transform.right * horizontal).normalized;
             isRunning = Input.GetKey(KeyCode.LeftShift);
             playerVelocityY += PlayerSpeedManagerServer._singleton.GetServerGravity() * tickRate;
@@ -225,13 +222,7 @@ internal class NetworkPlayerControls : NetworkBehaviour
 
             if (moveDirection != Vector3.zero)
             {
-                //transform.forward = moveDirection;
                 ProcessLocalPlayerMovement(moveDirection);
-            }
-
-            if (Input.GetButton("Jump"))
-            {
-                JumpServerRpc();
             }
         }
 
@@ -247,31 +238,5 @@ internal class NetworkPlayerControls : NetworkBehaviour
 
         transform.forward = moveDirection;
         controller.Move(direction * speed * tickRate);
-    }
-
-    private void PerformJump()
-    {
-        playerVelocityY = PlayerSpeedManagerServer._singleton.GetServerJumpHeight();
-    }
-
-    [ServerRpc]
-    private void JumpServerRpc(ServerRpcParams rpcParams = default)
-    {
-        if (controller.isGrounded && PlayerSpeedManagerServer._singleton.GetCanJumpBool())
-        {
-            PerformJump();
-            JumpClientRpc(OwnerClientId);
-        }
-    }
-
-    [ClientRpc]
-    private void JumpClientRpc(ulong clientId, ClientRpcParams rpcParams = default)
-    {
-        rpcParams.Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { clientId } };
-
-        if (NetworkManager.Singleton.LocalClientId == clientId)
-        {
-            PerformJump();
-        }
     }
 }
