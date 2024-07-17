@@ -1,15 +1,12 @@
 using Cinemachine;
-using NTC.MonoCache;
-using TouchControlsKit;
 using UnityEngine;
 
-internal class OrbitCamera : MonoCache
+internal class OrbitCamera : MonoBehaviour
 {
     [SerializeField] private float XSensitivity = 5f, YSensitivity = 8f;
     [SerializeField] internal bool canControl;
     [SerializeField] internal bool isFirstPerson { get; private set; }
     [SerializeField] private CinemachineFreeLook virtualCamera;
-    private static TCKTouchpad touchpad;
     internal static OrbitCamera singleton { get; private set; }
 
     protected override void OnEnabled()
@@ -20,7 +17,7 @@ internal class OrbitCamera : MonoCache
     internal void InitializeCursor(bool valueCanControl)
     {
         canControl = valueCanControl;
-        Cursor.lockState = !Application.isMobilePlatform ? (canControl ? CursorLockMode.Locked : CursorLockMode.None) : CursorLockMode.None;
+        Cursor.lockState = canControl ? CursorLockMode.Locked : CursorLockMode.None;
         Cursor.visible = !canControl ? true : false;
     }
 
@@ -28,24 +25,13 @@ internal class OrbitCamera : MonoCache
     {
         touchpad = _touchpad;
         virtualCamera.Follow = player;
-        virtualCamera.LookAt = player;
     }
 
-    protected override void Run()
+    private void Update()
     {
         if (!canControl) { return; }
 
-        virtualCamera.m_XAxis.Value += Application.isMobilePlatform ? touchpad.axisX.value : Input.GetAxis("Mouse X") * XSensitivity;
-        virtualCamera.m_YAxis.Value -= Application.isMobilePlatform ? touchpad.axisY.value : Input.GetAxis("Mouse Y") * YSensitivity;
-
-        if (Input.GetKeyDown(KeyCode.V))
-        {
-            ViewSwitch();
-        }
-    }
-
-    private void ViewSwitch()
-    {
-        isFirstPerson = !isFirstPerson;
+        virtualCamera.m_XAxis.Value += Input.GetAxis("Mouse X") * XSensitivity;
+        virtualCamera.m_YAxis.Value -= Input.GetAxis("Mouse Y") * YSensitivity;
     }
 }
